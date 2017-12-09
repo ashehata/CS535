@@ -13,6 +13,7 @@ void TM::Allocate(int vsN, int tsN) {
 	cols = new V3[vertsN];
 	trisN = tsN;
 	tris = new unsigned[3*trisN];
+	tcs = new V3[vertsN];
 
 }
 
@@ -26,6 +27,8 @@ void TM::SetToBox(V3 O, V3 dims, V3 color) {
 		cols[vi] = color;
 		cols[vi + vertsN / 2] = color*0.5f;
 	}
+
+	cols[0] = color * 0;
 
 	int vi = 0;
 	verts[vi++] = O + V3(-dims[0] / 2.0f, +dims[1] / 2.0f, +dims[2] / 2.0f);
@@ -102,6 +105,23 @@ void TM::SetToBox(V3 O, V3 dims, V3 color) {
 	tri++;
 	trisN += 2;
 
+	tcs[0] = V3(0.0f, 0.0f, 0.0f);
+	tcs[1] = V3(0.0f, 1.0f, 0.0f);
+	tcs[2] = V3(1.0f, 1.0f, 0.0f);
+	tcs[3] = V3(1.0f, 0.0f, 0.0f);
+
+	tcs[4] = V3(0.0f, 1.0f, 0.0f);
+	tcs[5] = V3(0.0f, 0.0f, 0.0f);
+	tcs[6] = V3(1.0f, 0.0f, 0.0f);
+	tcs[7] = V3(1.0f, 1.0f, 0.0f);
+
+	tcs_2D = new float[vertsN * 2];
+
+	for (int i = 0; i < vertsN; i++) {
+		tcs_2D[2 * i] = tcs[i][0];
+		tcs_2D[2 * i + 1] = tcs[i][1];
+	}
+
 
 
 
@@ -142,6 +162,13 @@ void TM::SetToRectangle(V3 O, V3 dims, V3 color) {
 	tcs[1] = V3(0.0f, 1.0f, 0.0f);
 	tcs[2] = V3(1.0f, 1.0f, 0.0f);
 	tcs[3] = V3(1.0f, 0.0f, 0.0f);
+
+	tcs_2D = new float[vertsN * 2];
+
+	for (int i = 0; i < vertsN; i++) {
+		tcs_2D[2 * i] = tcs[i][0];
+		tcs_2D[2 * i + 1] = tcs[i][1];
+	}
 
 }
 
@@ -295,8 +322,8 @@ void TM::RenderFilled(PPC *ppc, FrameBuffer *fb) {
 					fb->SetZB(currPix, ccSSv.GetColor());
 					continue;
 				}
-				if (id == -1) {
-					V3 materialColor(1.0f, 0.0f, 0.0f);
+				if (id == 2) {
+					V3 materialColor(0.0f, 0.0f, 1.0f);
 					float ka = 0.3f;
 					V3 L(0.0f, 0.0f, 0.0f);
 					if (scene)
@@ -532,23 +559,78 @@ void TM::RenderGFB(PPC *ppc, GFB *gfb) {
 
 }
 
+void TM::TranslateVertices(V3 offset) {
+	for (int vi = 0; vi < vertsN; vi++) {
+		verts[vi] = verts[vi] + offset;
+	}
+}
+
+void TM::Scale(V3 newScale) {
+	/* move to origin */
+	V3 offset = V3(0, 0, 0) - GetCenterOfMass();
+	V3 reverseOffset = GetCenterOfMass() - V3(0, 0, 0);
+
+	TranslateVertices(offset);
+
+
+	for (int vi = 0; vi < vertsN; vi++) {
+		verts[vi][0] = verts[vi][0] * newScale[0];
+		verts[vi][1] = verts[vi][1] * newScale[1];
+		verts[vi][2] = verts[vi][2] * newScale[2];
+	}
+
+	TranslateVertices(reverseOffset);
+}
+
 
 void TM::RenderHW() {
 
-	glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	if (filledMode) {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+	}
+	else {
+		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+	}
+
 
 	glEnableClientState(GL_VERTEX_ARRAY);
-	glEnableClientState(GL_COLOR_ARRAY);
-	glEnableClientState(GL_NORMAL_ARRAY);
+
+	if (textured) {
+		glEnable(GL_TEXTURE_2D);
+		glBindTexture(GL_TEXTURE_2D, texId);
+		glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+		glTexCoordPointer(2, GL_FLOAT, 0, tcs_2D);
+	}
+	else {
+		glEnableClientState(GL_COLOR_ARRAY);
+	}
+
+	if (normals) {
+		glEnableClientState(GL_NORMAL_ARRAY);
+	}
 
 	glVertexPointer(3, GL_FLOAT, 0, (float*)verts);
 	glColorPointer(3, GL_FLOAT, 0, (float*)cols);
-	glNormalPointer(GL_FLOAT, 0, (float*)normals);
+
+	if (normals) {
+		glNormalPointer(GL_FLOAT, 0, (float*)normals);
+	}
 
 	glDrawElements(GL_TRIANGLES, 3 * trisN, GL_UNSIGNED_INT, tris);
 
-	glDisableClientState(GL_NORMAL_ARRAY);
-	glDisableClientState(GL_COLOR_ARRAY);
+	if (normals) {
+		glDisableClientState(GL_NORMAL_ARRAY);
+	}
+
+	if (textured) {
+		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		//glDisable(GL_TEXTURE_GEN_S);
+		glDisable(GL_TEXTURE_2D);
+	}
+	else {
+		glDisableClientState(GL_COLOR_ARRAY);
+	}
+
 	glDisableClientState(GL_VERTEX_ARRAY);
 
 }

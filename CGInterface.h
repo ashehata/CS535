@@ -35,7 +35,12 @@ class ShaderOneInterface {
   CGparameter geometryModelViewProj; // geometry shader
   CGparameter fragmentEye; // output view center of projection
   CGparameter fragmentLight; // position of light
-public:
+  CGparameter billboardTexture; // billboard texture
+  CGparameter billboardtlc; // coordinates of billboard
+  CGparameter billboardtrc;
+  CGparameter billboardblc;
+
+public:		  
   ShaderOneInterface() {};
   bool PerSessionInit(CGInterface *cgi); // per session initialization
   void BindPrograms(); // enable geometryProgram, vertexProgram, fragmentProgram

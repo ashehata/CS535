@@ -30,7 +30,7 @@ VertexDataOutput VertexMain(VertexDataInput vdi,
   ret.projv = mul(modelViewProj, morphedVertex);
   ret.normal = vdi.normal;
   ret.vxyz = vdi.vertex.xyz;
-  ret.color = vdi.color;
+  //ret.color = vdi.color;
   return ret;
 
 }
@@ -48,13 +48,12 @@ TRIANGLE void GeometryMain(AttribArray<VertexDataOutput> tverts,
 
 PixelDataOutput FragmentMain(VertexDataOutput pdi, 
 	uniform float3 eye, uniform float3 light,
-	uniform float3 tlc, uniform float3 trc, uniform float3 blc) {
+	uniform float3 tlc, uniform float3 trc, uniform float3 blc, uniform sampler2D billboardTexture) {
 
 
 
   PixelDataOutput ret;
-  ret.color = pdi.color;
-  return ret;
+
 
   float3 materialColor = float3(1.0f, 0.0f, 0.0f);
   float ka = 0.4f;
@@ -85,9 +84,45 @@ PixelDataOutput FragmentMain(VertexDataOutput pdi,
  
 // compute reflected ray at current pixel (fragment) from pdi.xyz, pdi.normal, and eye
 
-// intersect reflected ray with billboard plane
+   float3 reflectedRay = normalize(pdi.normal * (eye * pdi.normal) * 2.0 - eye);
 
-// if intersection, compute billboard texture coordinates
+// intersect reflected ray with billboard plane
+   float3 bbNormal = normalize(cross(blc - tlc, trc - tlc));
+   float t =  dot((tlc - pdi.vxyz), bbNormal);
+   t = t / dot(reflectedRay, bbNormal);
+   if (t> 0){
+   // if intersection, compute billboard texture coordinates
+   float bbWidthNum = pdi.vxyz.x - tlc.x;
+   float bbWidthDenom = trc.x - tlc.x;
+   float s = bbWidthNum/bbWidthDenom;
+
+   float bbHeightNum = pdi.vxyz.y - tlc.y;
+   float bbHeightDenom = blc.y - tlc.y;
+   float t = bbHeightNum/bbHeightDenom;
+   
+   if (s > 0 && s < 1 && t > 0 && s < 1){
+	//ret.color.rgb = texelFetch(billboardTexture, float2(s, t), 0).rgb;
+	float2 st = vec2(s, t);
+	float4 tex = tex2D(billboardTexture,st);
+	if (tex.a != 0){
+		ret.color.rgb = tex.rgb;
+	}
+	else{
+	     ret.color.rgb = litColor;
+	}
+   }
+
+   else{
+     ret.color.rgb = litColor;
+   }
+
+
+   }
+   else{
+	ret.color.rgb = litColor;
+   }
+
+
 
 // lookup billboard texture at intersection texture coordinates
 

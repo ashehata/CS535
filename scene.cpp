@@ -41,62 +41,79 @@ Scene::Scene() {
 	gpufb->label("GPU First person");
 	gpufb->show();
 
-	fb3 = new FrameBuffer(u0, v0, w, h, 1);
-	fb3->label("Third person");
-	fb3->position(u0 + fb->w + 20, v0);
-	//fb3->show();
+
 
 	gui->uiw->position(u0, v0 + fb->h + 60);
 
 	float hfov = 55.0f;
 	ppc = new PPC(fb->w, fb->h, hfov);
-	ppc3 = new PPC(fb3->w, fb3->h, 90.0f);
 
-	tmsN = 6;
+	tmsN = 4;
 	tms = new TM[tmsN];
-	tms[0].id = 0;
-	tms[1].id = 1;
-	tms[0].SetToBox(V3(0.0f, 0.0f, -100.0f), V3(30.0f, 30.0f, 30.0f), 
-		V3(1.0f, 0.5f, 0.0f));
-	tms[0].enabled = 0;
-	tms[1].LoadBin("geometry/teapot1K.bin");
+	tms[0].LoadBin("geometry/teapot57K.bin");
+	tms[0].enabled = 1;
+	tms[0].textured = false;
+	//AABB aabb = tms[1].ComputeAABB();
+	//cerr << "INFO: teapot aabb: " << aabb.corners[0] << "; " << aabb.corners[1] << endl;
+
+	AABB aabb = tms[0].ComputeAABB();
+	V3 bC = tms[0].GetCenterOfMass();
+	bC[1] = aabb.corners[0][1];
+
+	tms[1].SetToBox(bC, V3(200.0f, 0.0f, 200.0f), V3(1.0f, 1.0f, 1.0f));
 	tms[1].enabled = 1;
-	AABB aabb = tms[1].ComputeAABB();
-	cerr << "INFO: teapot aabb: " << aabb.corners[0] << "; " << aabb.corners[1] << endl;
-	ppc->C = tms[1].GetCenterOfMass() + V3(0.0f, 0.0f, 110.0f);
+	tms[1].textured = true;
+
+	tms[2].LoadBin("geometry/bunny.bin");
+	tms[2].TranslateVertices(V3(0, 10, 70));
+	tms[2].enabled = 1;
+	tms[2].id = 2;
+	tms[2].textured = false;
+	tms[2].Scale(V3(200, 200, 200));
+	tms[2].enabled = 1;
+
+
+	CreateBillboard();
+
+	ppc->C = tms[0].GetCenterOfMass() + V3(-25.0f, 25.0f, 200);
 	L = ppc->C;
 
-	ppc3->PositionAndOrient(ppc->C + V3(50.0f, 100.0f, 50.0f), tms[1].GetCenterOfMass(), V3(0.0f, 1.0f, 0.0f));
-	tms[2].SetToRectangle(V3(0.0f, 120.0f, -1000.0f), V3(1000.0f, 230.0f, 0.0f), V3(0.0f, 0.0f, 0.0f));
-	tms[2].cols[0] = tms[2].cols[1] = V3(1.0f, 1.0f, 1.0f);
-	tms[2].id = 2;
-	tms[3].SetToRectangle(V3(0.0f, -120.0f, -1000.0f), V3(1000.0f, 230.0f, 0.0f), V3(0.0f, 0.0f, 0.0f));
-	tms[3].cols[0] = tms[3].cols[1] = V3(1.0f, 1.0f, 1.0f);
-	tms[3].id = 3;
-	tms[2].enabled = tms[3].enabled = 0;
 
-	texts = new FrameBuffer(0, 0, 128, 128, 2);
-	texts->SetBWCheckerboard(16);
-	texts->label("texture");
-//	texts->show();
-	tms[4].SetToRectangle(V3(0.0f, 0.0f, -100.0f), V3(100.0f, 100.0f, 0.0f), V3(1.0f, 1.0f, 1.0f));
-	tms[4].tex = texts;
-	tms[4].enabled = 0;
-	tms[4].id = 4;
-	Render(fb, ppc);
-	Render(fb3, ppc3);
-
-	aabb = tms[1].ComputeAABB();
-	V3 bC = tms[1].GetCenterOfMass();
-	bC[1] = aabb.corners[0][1];
-	tms[5].SetToBox(bC, V3(200.0f, 1.0f, 200.0f), V3(1.0f, 1.0f, 1.0f));
-	tms[5].id = 5;
-	L = L + V3(30.0f, 80.0f, -20.0f);
-	tms[5].enabled = 0;
 
 	smppc = 0;
 	smfb = 0;
 	gfb = 0;
+
+
+}
+
+void Scene::CreateBillboard() {
+	billboard = new FrameBuffer(0, 0, 1024, 1024, -1);
+
+	PPC *cam = new PPC(1024, 1024, 45);
+	cam->PositionAndOrient(V3(0, 0, 0), tms[2].GetCenterOfMass(), V3(0, 1, 0));
+	RenderBillboard(billboard, cam, 2);
+	billboard->show();
+
+	AABB aabb = tms[2].ComputeAABB();
+
+	double bbWidth = fabs(aabb.corners[0][0] - aabb.corners[1][0]);
+	double bbHeight = fabs(aabb.corners[0][1] - aabb.corners[1][1]);
+
+	V3 origin = V3((aabb.corners[0][0] + aabb.corners[1][0] / 2), (aabb.corners[0][1] + aabb.corners[1][1]) / 2, (aabb.corners[0][2] + aabb.corners[1][2]) / 2);
+	tms[3].SetToRectangle(origin, V3(bbWidth, bbHeight, 0.0f), V3(0, 0, 0));
+	tms[3].enabled = 0;
+
+	billboardtlc = tms[3].verts[0];
+	billboardblc = tms[3].verts[1];
+	billboardtrc = tms[3].verts[3];
+
+}
+
+void Scene::RenderBillboard(FrameBuffer *currfb, PPC *currppc, int tmi) {
+	unsigned int bgr = 0x00000000;
+	currfb->Clear(bgr, 0.0f);
+	tms[tmi].RenderFilled(currppc, currfb);
 
 }
 
@@ -441,7 +458,7 @@ void Scene::NewButton() {
 
 void Scene::RenderAll() {
 
-//	Render(fb, ppc);
+	//	Render(fb, ppc);
 	if (hwfb)
 		hwfb->redraw();
 	if (gpufb)
@@ -450,8 +467,73 @@ void Scene::RenderAll() {
 
 }
 
+void Scene::InitializeHW() {
+
+	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
+
+	texts = new FrameBuffer(0, 0, 1024, 1024, -1);
+	texts->SetBWCheckerboard(16);
+
+	unsigned int * texture = new unsigned int[texts->w * texts->h];
+
+	int i = 0;
+
+	for (int v = 0; v < texts->h; v++) {
+		for (int u = 0; u < texts->w; u++) {
+			texture[i] = billboard->Get(u, v);
+			i++;
+		}
+	}
+
+	GLuint textureID;
+	glGenTextures(1, &textureID);
+
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	// Give the image to OpenGL
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, billboard->w, billboard->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	
+	for (int tmi = 0; tmi < tmsN; tmi++) {
+		if (!tms[tmi].enabled)
+			continue;
+		tms[tmi].texId = textureID;
+	}
+
+	unsigned int * bbtexture = new unsigned int[billboard->w * billboard->h];
+
+	i = 0;
+
+	for (int v = 0; v < texts->h; v++) {
+		for (int u = 0; u < texts->w; u++) {
+			texture[i] = billboard->Get(u, v);
+			i++;
+		}
+	}
+
+	glGenTextures(1, &textureID);
+
+	// "Bind" the newly created texture : all future texture functions will modify this texture
+	glBindTexture(GL_TEXTURE_2D, textureID);
+
+	// Give the image to OpenGL
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, billboard->w, billboard->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+
+	billboardTextureId = textureID;
+
+	HWInitialized = true;
+}
 
 void Scene::RenderHW() {
+	
 
 	// clear the framebuffer
 	glClearColor(0.0, 0.0f, 0.5f, 1.0f);
@@ -464,6 +546,10 @@ void Scene::RenderHW() {
 	ppc->SetIntrinsicsHW(1.0f, 1000.0f);
 	// set extrinsics
 	ppc->SetExtrinsicsHW();
+
+	if (!HWInitialized) {
+		InitializeHW();
+	}
 
 	// render geometry
 	for (int tmi = 0; tmi < tmsN; tmi++) {
@@ -475,7 +561,6 @@ void Scene::RenderHW() {
 }
 
 void Scene::RenderGPU() {
-
 	// if the first time, call per session initialization
 	if (cgi == NULL) {
 		cgi = new CGInterface();
@@ -483,6 +568,11 @@ void Scene::RenderGPU() {
 		soi = new ShaderOneInterface();
 		soi->PerSessionInit(cgi);
 	}
+
+	if (!HWInitialized) {
+		InitializeHW();
+	}
+
 
 	// clear the framebuffer
 	glClearColor(0.0, 0.0f, 0.5f, 1.0f);
@@ -496,17 +586,31 @@ void Scene::RenderGPU() {
 	// set extrinsics
 	ppc->SetExtrinsicsHW();
 
+
+	tms[1].RenderHW();
+	tms[2].RenderHW();
+
+
 	// per frame initialization
 	cgi->EnableProfiles();
 	soi->PerFrameInit();
 	soi->BindPrograms();
 
 	// render geometry
-	for (int tmi = 0; tmi < tmsN; tmi++) {
-		if (!tms[tmi].enabled)
-			continue;
-		tms[tmi].RenderHW();
-	}
+
+	tms[0].RenderHW();
 
 	cgi->DisableProfiles();
+}
+
+void Scene::EnableFilledMode() {
+
+}
+
+void Scene::EnableWireframeMode() {
+
+}
+
+void Scene::ToggleReflectionShader() {
+
 }

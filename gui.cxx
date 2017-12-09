@@ -2,31 +2,54 @@
 
 #include "gui.h"
 
-void GUI::cb_DBG_i(Fl_Button*, void*) {
-  DBG_cb();
+void GUI::cb_FilledMode_i(Fl_Button*, void*) {
+  FilledMode_cb();
 }
-void GUI::cb_DBG(Fl_Button* o, void* v) {
-  ((GUI*)(o->parent()->user_data()))->cb_DBG_i(o,v);
+void GUI::cb_FilledMode(Fl_Button* o, void* v) {
+  ((GUI*)(o->parent()->user_data()))->cb_FilledMode_i(o,v);
 }
 
-void GUI::cb_NewButton_i(Fl_Return_Button*, void*) {
-  NewButton_cb();
+void GUI::cb_WireframeMode_i(Fl_Button*, void*) {
+  WireframeMode_cb();
 }
-void GUI::cb_NewButton(Fl_Return_Button* o, void* v) {
-  ((GUI*)(o->parent()->user_data()))->cb_NewButton_i(o,v);
+void GUI::cb_WireframeMode(Fl_Button* o, void* v) {
+  ((GUI*)(o->parent()->user_data()))->cb_WireframeMode_i(o,v);
+}
+
+void GUI::cb_ToggleReflectionShader_i(Fl_Button*, void*) {
+  ToggleReflectionShader_cb();
+}
+void GUI::cb_ToggleReflectionShader(Fl_Button* o, void* v) {
+  ((GUI*)(o->parent()->user_data()))->cb_ToggleReflectionShader_i(o,v);
+}
+
+void GUI::cb_Debug_i(Fl_Button*, void*) {
+  DBG_cb();
+}
+void GUI::cb_Debug(Fl_Button* o, void* v) {
+  ((GUI*)(o->parent()->user_data()))->cb_Debug_i(o,v);
 }
 #include "scene.h"
 
 GUI::GUI() {
-  { uiw = new Fl_Double_Window(199, 197, "GUI");
+  { uiw = new Fl_Double_Window(198, 197, "GUI");
     uiw->user_data((void*)(this));
-    { Fl_Button* o = new Fl_Button(15, 15, 95, 40, "DBG");
-      o->selection_color(FL_DARK_RED);
-      o->callback((Fl_Callback*)cb_DBG);
-    } // Fl_Button* o
-    { Fl_Return_Button* o = new Fl_Return_Button(30, 80, 110, 100, "NewButton");
-      o->callback((Fl_Callback*)cb_NewButton);
-    } // Fl_Return_Button* o
+    { // 	
+      FilledMode = new Fl_Button(15, 75, 165, 25, "Filled Mode");
+      FilledMode->callback((Fl_Callback*)cb_FilledMode);
+    } // Fl_Button* FilledMode
+    { // 	
+      WireframeMode = new Fl_Button(15, 105, 165, 25, "Wire Frame Mode");
+      WireframeMode->callback((Fl_Callback*)cb_WireframeMode);
+    } // Fl_Button* WireframeMode
+    { // 		
+      ToggleReflectionShader = new Fl_Button(15, 135, 165, 25, "Toggle Reflection Shader");
+      ToggleReflectionShader->callback((Fl_Callback*)cb_ToggleReflectionShader);
+    } // Fl_Button* ToggleReflectionShader
+    { // 	
+      Debug = new Fl_Button(15, 45, 165, 25, "Debug");
+      Debug->callback((Fl_Callback*)cb_Debug);
+    } // Fl_Button* Debug
     uiw->end();
   } // Fl_Double_Window* uiw
 }
@@ -46,4 +69,16 @@ void GUI::DBG_cb() {
 
 void GUI::NewButton_cb() {
   scene->NewButton();
+}
+
+void GUI::FilledMode_cb() {
+  scene->EnableFilledMode();
+}
+
+void GUI::WireframeMode_cb() {
+  scene->EnableWireframeMode();
+}
+
+void GUI::ToggleReflectionShader_cb() {
+  scene->ToggleReflectionShader();
 }

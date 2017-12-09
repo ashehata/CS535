@@ -5,20 +5,36 @@
 #include <FL/Fl.H>
 #include <FL/Fl_Double_Window.H>
 #include <FL/Fl_Button.H>
-#include <FL/Fl_Return_Button.H>
 
 class GUI {
 public:
   GUI();
   Fl_Double_Window *uiw;
+  Fl_Button *FilledMode;
 private:
-  inline void cb_DBG_i(Fl_Button*, void*);
-  static void cb_DBG(Fl_Button*, void*);
-  inline void cb_NewButton_i(Fl_Return_Button*, void*);
-  static void cb_NewButton(Fl_Return_Button*, void*);
+  inline void cb_FilledMode_i(Fl_Button*, void*);
+  static void cb_FilledMode(Fl_Button*, void*);
+public:
+  Fl_Button *WireframeMode;
+private:
+  inline void cb_WireframeMode_i(Fl_Button*, void*);
+  static void cb_WireframeMode(Fl_Button*, void*);
+public:
+  Fl_Button *ToggleReflectionShader;
+private:
+  inline void cb_ToggleReflectionShader_i(Fl_Button*, void*);
+  static void cb_ToggleReflectionShader(Fl_Button*, void*);
+public:
+  Fl_Button *Debug;
+private:
+  inline void cb_Debug_i(Fl_Button*, void*);
+  static void cb_Debug(Fl_Button*, void*);
 public:
   void show();
   void DBG_cb();
   void NewButton_cb();
+  void FilledMode_cb();
+  void WireframeMode_cb();
+  void ToggleReflectionShader_cb();
 };
 #endif

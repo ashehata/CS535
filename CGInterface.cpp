@@ -99,6 +99,12 @@ bool ShaderOneInterface::PerSessionInit(CGInterface *cgi) {
   fragmentEye = cgGetNamedParameter(fragmentProgram, "eye");
   fragmentLight = cgGetNamedParameter(fragmentProgram, "light");
 
+  billboardTexture = cgGetNamedParameter(fragmentProgram, "billboardTexture");
+  billboardtlc = cgGetNamedParameter(fragmentProgram, "tlc");
+  billboardtrc = cgGetNamedParameter(fragmentProgram, "trc");
+  billboardblc = cgGetNamedParameter(fragmentProgram, "blc");
+
+
   return true;
 
 }
@@ -124,6 +130,11 @@ void ShaderOneInterface::PerFrameInit() {
   cgGLSetParameter1f(vertexSphereRadius, sphereRadius);
   cgGLSetParameter1f(vertexMorphFraction, scene->morphFraction);
 
+  cgGLSetParameter3fv(billboardtlc, (float*)&scene->billboardtlc);
+  cgGLSetParameter3fv(billboardtrc, (float*)&scene->billboardtrc);
+  cgGLSetParameter3fv(billboardblc, (float*)&scene->billboardblc);
+
+  cgGLSetTextureParameter(billboardTexture, (GLuint) &scene->billboardTextureId);
 
   V3 eye = scene->ppc->C;
 //  eye = eye + V3(14.0f, 14.0f, 14.0f);
