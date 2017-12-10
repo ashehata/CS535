@@ -26,11 +26,10 @@ VertexDataOutput VertexMain(VertexDataInput vdi,
   float4 morphedVertex;
   morphedVertex.xyz = vdi.vertex.xyz + (finalPosition-vdi.vertex.xyz)*morphFraction;
   morphedVertex.w = 1.0f;
-//  ret.projv = mul(modelViewProj, vdi.vertex);
   ret.projv = mul(modelViewProj, morphedVertex);
   ret.normal = vdi.normal;
   ret.vxyz = vdi.vertex.xyz;
-  //ret.color = vdi.color;
+  ret.color = vdi.color;
   return ret;
 
 }
@@ -55,7 +54,7 @@ PixelDataOutput FragmentMain(VertexDataOutput pdi,
   PixelDataOutput ret;
 
 
-  float3 materialColor = float3(1.0f, 0.0f, 0.0f);
+  float3 materialColor = pdi.color;
   float ka = 0.4f;
   float3 eyev = normalize(eye-pdi.vxyz);
   float3 normal = normalize(pdi.normal);
@@ -65,28 +64,8 @@ PixelDataOutput FragmentMain(VertexDataOutput pdi,
   float3 litColor = materialColor*(ka + (1-ka)*kd);
   ret.color.rgb = litColor;
 
-//  ret.color.rgb = float3(1.0f, 1.0f, 0.0f);
-//  ret.color.rgb = eye;
-
-//  ret.color.rgb = (pdi.normal + float3(1.0f, 1.0f, 1.0f))/2.0f;
-
-// float3 c0;
-// c0 = float3(-60.8652, 0, -13.9045);
-// float3 c1;
-// c1 = float3(39.5258, 47.25, 48.5653);
-// ret.color.rgb = float3(0.0f, 0.0f, 0.0f);
-// ret.color.r = (pdi.vxyz.x-c0.x)/(c1.x-c0.x);
-// ret.color.g = (pdi.vxyz.y-c0.y)/(c1.y-c0.y);
-// ret.color.b = (pdi.vxyz.z-c0.z)/(c1.z-c0.z);
-
-
-// pass top left, top right, and bottom left corners of the billboard to fragment shader (tlc, trc, blc) 
- 
-// compute reflected ray at current pixel (fragment) from pdi.xyz, pdi.normal, and eye
-
    float3 reflectedRay = normalize(pdi.normal * (eye * pdi.normal) * 2.0 - eye);
 
-// intersect reflected ray with billboard plane
    float3 bbNormal = normalize(cross(blc - tlc, trc - tlc));
    float t =  dot((tlc - pdi.vxyz), bbNormal);
    t = t / dot(reflectedRay, bbNormal);
@@ -101,7 +80,6 @@ PixelDataOutput FragmentMain(VertexDataOutput pdi,
    float t = bbHeightNum/bbHeightDenom;
    
    if (s > 0 && s < 1 && t > 0 && s < 1){
-	//ret.color.rgb = texelFetch(billboardTexture, float2(s, t), 0).rgb;
 	float2 st = vec2(s, t);
 	float4 tex = tex2D(billboardTexture,st);
 	if (tex.a != 0){

@@ -62,9 +62,10 @@ Scene::Scene() {
 
 	tms[1].SetToBox(bC, V3(200.0f, 0.0f, 200.0f), V3(1.0f, 1.0f, 1.0f));
 	tms[1].enabled = 1;
-	tms[1].textured = true;
+	tms[1].textured = false;
 
 	tms[2].LoadBin("geometry/bunny.bin");
+	tms[2].SetColor(V3(0,0,1));
 	tms[2].TranslateVertices(V3(0, 10, 70));
 	tms[2].enabled = 1;
 	tms[2].id = 2;
@@ -588,7 +589,6 @@ void Scene::RenderGPU() {
 
 
 	tms[1].RenderHW();
-	tms[2].RenderHW();
 
 
 	// per frame initialization
@@ -599,6 +599,8 @@ void Scene::RenderGPU() {
 	// render geometry
 
 	tms[0].RenderHW();
+	tms[2].RenderHW();
+
 
 	cgi->DisableProfiles();
 }

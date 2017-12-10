@@ -582,6 +582,13 @@ void TM::Scale(V3 newScale) {
 	TranslateVertices(reverseOffset);
 }
 
+void TM::SetColor(V3 color) {
+	for (int vi = 0; vi < vertsN; vi++) {
+		cols[vi] = color;
+	}
+
+}
+
 
 void TM::RenderHW() {
 

@@ -40,6 +40,7 @@ public:
 	void VisualizeNormals(PPC *ppc, FrameBuffer *fb, float len);
 	AABB ComputeAABB();
 	void RenderHW();
+	void SetColor(V3 color);
 
 	void TranslateVertices(V3 offset);
 	void Scale(V3 scale);
