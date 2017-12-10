@@ -631,7 +631,7 @@ void TM::RenderHW() {
 
 	if (textured) {
 		glDisableClientState(GL_TEXTURE_COORD_ARRAY);
-		//glDisable(GL_TEXTURE_GEN_S);
+		glDisable(GL_TEXTURE_GEN_S);
 		glDisable(GL_TEXTURE_2D);
 	}
 	else {

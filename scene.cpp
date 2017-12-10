@@ -62,7 +62,7 @@ Scene::Scene() {
 
 	tms[1].SetToBox(bC, V3(200.0f, 0.0f, 200.0f), V3(1.0f, 1.0f, 1.0f));
 	tms[1].enabled = 1;
-	tms[1].textured = false;
+	tms[1].textured = true;
 
 	tms[2].LoadBin("geometry/bunny.bin");
 	tms[2].SetColor(V3(0,0,1));
@@ -482,29 +482,26 @@ void Scene::InitializeHW() {
 
 	for (int v = 0; v < texts->h; v++) {
 		for (int u = 0; u < texts->w; u++) {
-			texture[i] = billboard->Get(u, v);
+			texture[i] = texts->Get(u, v);
 			i++;
 		}
 	}
 
-	GLuint textureID;
-	glGenTextures(1, &textureID);
+	GLuint checkerboardId;
+	glGenTextures(1, &checkerboardId);
 
 	// "Bind" the newly created texture : all future texture functions will modify this texture
-	glBindTexture(GL_TEXTURE_2D, textureID);
+	glBindTexture(GL_TEXTURE_2D, checkerboardId);
 
 	// Give the image to OpenGL
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, billboard->w, billboard->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texts->w, texts->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture);
 
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
 	
-	for (int tmi = 0; tmi < tmsN; tmi++) {
-		if (!tms[tmi].enabled)
-			continue;
-		tms[tmi].texId = textureID;
-	}
+	tms[1].texId = checkerboardId;
+
 
 	unsigned int * bbtexture = new unsigned int[billboard->w * billboard->h];
 
@@ -517,10 +514,12 @@ void Scene::InitializeHW() {
 		}
 	}
 
-	glGenTextures(1, &textureID);
+	GLuint billboardId;
+
+	glGenTextures(1, &billboardId);
 
 	// "Bind" the newly created texture : all future texture functions will modify this texture
-	glBindTexture(GL_TEXTURE_2D, textureID);
+	glBindTexture(GL_TEXTURE_2D, billboardId);
 
 	// Give the image to OpenGL
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, billboard->w, billboard->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture);
@@ -528,7 +527,8 @@ void Scene::InitializeHW() {
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	billboardTextureId = textureID;
+	billboardTextureId = billboardId;
+	tms[0].texId = billboardId;
 
 	HWInitialized = true;
 }
@@ -586,7 +586,6 @@ void Scene::RenderGPU() {
 	ppc->SetIntrinsicsHW(1.0f, 1000.0f);
 	// set extrinsics
 	ppc->SetExtrinsicsHW();
-
 
 	tms[1].RenderHW();
 

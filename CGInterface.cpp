@@ -134,8 +134,8 @@ void ShaderOneInterface::PerFrameInit() {
   cgGLSetParameter3fv(billboardtrc, (float*)&scene->billboardtrc);
   cgGLSetParameter3fv(billboardblc, (float*)&scene->billboardblc);
 
-  cgGLSetTextureParameter(billboardTexture, (GLuint) &scene->billboardTextureId);
-
+  cgGLSetTextureParameter(billboardTexture, scene->billboardTextureId);
+  cgGLEnableTextureParameter(billboardTexture);
   V3 eye = scene->ppc->C;
 //  eye = eye + V3(14.0f, 14.0f, 14.0f);
 //  eye = eye/150.0f;
