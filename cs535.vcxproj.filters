@@ -51,6 +51,12 @@
     <ClInclude Include="stdafx.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="CubeMap.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="lodepng.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="scene.cpp">
@@ -86,6 +92,12 @@
     <ClCompile Include="stdafx.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="CubeMap.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="lodepng.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="gui.fl">
@@ -94,6 +106,12 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="CG\shaderOne.cg">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="CG\environmentMapping.cg">
+      <Filter>Resource Files</Filter>
+    </None>
+    <None Include="CG\diffuseShader.cg">
       <Filter>Resource Files</Filter>
     </None>
   </ItemGroup>

@@ -103,7 +103,8 @@ bool ShaderOneInterface::PerSessionInit(CGInterface *cgi) {
   billboardtlc = cgGetNamedParameter(fragmentProgram, "tlc");
   billboardtrc = cgGetNamedParameter(fragmentProgram, "trc");
   billboardblc = cgGetNamedParameter(fragmentProgram, "blc");
-
+  cgGLSetTextureParameter(environmentMap, scene->cm->texId);
+  cgGLEnableTextureParameter(environmentMap);
 
   return true;
 
@@ -136,6 +137,10 @@ void ShaderOneInterface::PerFrameInit() {
 
   cgGLSetTextureParameter(billboardTexture, scene->billboardTextureId);
   cgGLEnableTextureParameter(billboardTexture);
+
+  cgGLSetTextureParameter(environmentMap, scene->cm->texId);
+  cgGLEnableTextureParameter(environmentMap);
+
   V3 eye = scene->ppc->C;
 //  eye = eye + V3(14.0f, 14.0f, 14.0f);
 //  eye = eye/150.0f;
@@ -179,5 +184,164 @@ void CGInterface::EnableProfiles() {
 #endif
   cgGLEnableProfile(pixelCGprofile);
 
+}
+
+bool EnvironmentMappingInterface::PerSessionInit(CGInterface *cgi) {
+
+#ifdef GEOM_SHADER
+	geometryProgram = cgCreateProgramFromFile(cgi->cgContext, CG_SOURCE,
+		"CG/environmentMapping.cg", cgi->geometryCGprofile, "GeometryMain", NULL);
+	if (geometryProgram == NULL) {
+		CGerror Error = cgGetError();
+		cerr << "Shader One Geometry Program COMPILE ERROR: " << cgGetErrorString(Error) << endl;
+		cerr << cgGetLastListing(cgi->cgContext) << endl << endl;
+		return false;
+	}
+#endif
+
+	vertexProgram = cgCreateProgramFromFile(cgi->cgContext, CG_SOURCE,
+		"CG/environmentMapping.cg", cgi->vertexCGprofile, "VertexMain", NULL);
+	if (vertexProgram == NULL) {
+		CGerror Error = cgGetError();
+		cerr << "Shader One Geometry Program COMPILE ERROR: " << cgGetErrorString(Error) << endl;
+		cerr << cgGetLastListing(cgi->cgContext) << endl << endl;
+		return false;
+	}
+
+	fragmentProgram = cgCreateProgramFromFile(cgi->cgContext, CG_SOURCE,
+		"CG/environmentMapping.cg", cgi->pixelCGprofile, "FragmentMain", NULL);
+	if (fragmentProgram == NULL) {
+		CGerror Error = cgGetError();
+		cerr << "Shader One Fragment Program COMPILE ERROR: " << cgGetErrorString(Error) << endl;
+		cerr << cgGetLastListing(cgi->cgContext) << endl << endl;
+		return false;
+	}
+
+	// load programs
+#ifdef GEOM_SHADER
+	cgGLLoadProgram(geometryProgram);
+#endif
+	cgGLLoadProgram(vertexProgram);
+	cgGLLoadProgram(fragmentProgram);
+
+	// build some parameters by name such that we can set them later...
+	vertexModelViewProj = cgGetNamedParameter(vertexProgram, "modelViewProj");
+	vertexSphereRadius = cgGetNamedParameter(vertexProgram, "sphereRadius");
+	vertexSphereCenter = cgGetNamedParameter(vertexProgram, "sphereCenter");
+	vertexMorphFraction = cgGetNamedParameter(vertexProgram, "morphFraction");
+	geometryModelViewProj = cgGetNamedParameter(geometryProgram, "modelViewProj");
+	fragmentEye = cgGetNamedParameter(fragmentProgram, "eye");
+	environmentMap = cgGetNamedParameter(fragmentProgram, "environmentMap");
+
+	return true;
+	}
+
+void EnvironmentMappingInterface::PerFrameInit() {
+	//set parameters
+	cgGLSetStateMatrixParameter(vertexModelViewProj, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
+#ifdef GEOMETRY_SUPPORT
+	cgGLSetStateMatrixParameter(geometryModelViewProj, CG_GL_MODELVIEW_PROJECTION_MATRIX, CG_GL_MATRIX_IDENTITY);
+#endif
+
+	cgGLSetParameter3fv(fragmentEye, (float*)&(scene->ppc->C));
+	cgGLSetTextureParameter(environmentMap, scene->cm->texId);
+	cgGLEnableTextureParameter(environmentMap);
+}
+
+void EnvironmentMappingInterface::PerFrameDisable() {
+}
+
+void EnvironmentMappingInterface::BindPrograms() {
+#ifdef GEOMETRY_SUPPORT
+	cgGLBindProgram(geometryProgram);
+#endif
+	cgGLBindProgram(vertexProgram);
+	cgGLBindProgram(fragmentProgram);
+}
+
+bool DiffuseShaderInterface::PerSessionInit(CGInterface *cgi) {
+
+#ifdef GEOM_SHADER
+	geometryProgram = cgCreateProgramFromFile(cgi->cgContext, CG_SOURCE,
+		"CG/shaderOne.cg", cgi->geometryCGprofile, "GeometryMain", NULL);
+	if (geometryProgram == NULL) {
+		CGerror Error = cgGetError();
+		cerr << "Shader One Geometry Program COMPILE ERROR: " << cgGetErrorString(Error) << endl;
+		cerr << cgGetLastListing(cgi->cgContext) << endl << endl;
+		return false;
+	}
+#endif
+
+	vertexProgram = cgCreateProgramFromFile(cgi->cgContext, CG_SOURCE,
+		"CG/diffuseShader.cg", cgi->vertexCGprofile, "VertexMain", NULL);
+	if (vertexProgram == NULL) {
+		CGerror Error = cgGetError();
+		cerr << "Shader One Geometry Program COMPILE ERROR: " << cgGetErrorString(Error) << endl;
+		cerr << cgGetLastListing(cgi->cgContext) << endl << endl;
+		return false;
+	}
+
+	fragmentProgram = cgCreateProgramFromFile(cgi->cgContext, CG_SOURCE,
+		"CG/diffuseShader.cg", cgi->pixelCGprofile, "FragmentMain", NULL);
+	if (fragmentProgram == NULL) {
+		CGerror Error = cgGetError();
+		cerr << "Shader One Fragment Program COMPILE ERROR: " << cgGetErrorString(Error) << endl;
+		cerr << cgGetLastListing(cgi->cgContext) << endl << endl;
+		return false;
+	}
+
+	// load programs
+#ifdef GEOM_SHADER
+	cgGLLoadProgram(geometryProgram);
+#endif
+	cgGLLoadProgram(vertexProgram);
+	cgGLLoadProgram(fragmentProgram);
+
+	// build some parameters by name such that we can set them later...
+	vertexModelViewProj = cgGetNamedParameter(vertexProgram, "modelViewProj");
+	vertexSphereRadius = cgGetNamedParameter(vertexProgram, "sphereRadius");
+	vertexSphereCenter = cgGetNamedParameter(vertexProgram, "sphereCenter");
+	vertexMorphFraction = cgGetNamedParameter(vertexProgram, "morphFraction");
+	geometryModelViewProj = cgGetNamedParameter(geometryProgram, "modelViewProj");
+	fragmentEye = cgGetNamedParameter(fragmentProgram, "eye");
+	fragmentLight = cgGetNamedParameter(fragmentProgram, "light");
+
+	return true;
+}
+
+void DiffuseShaderInterface::PerFrameInit() {
+	//set parameters
+	cgGLSetStateMatrixParameter(
+		vertexModelViewProj,
+		CG_GL_MODELVIEW_PROJECTION_MATRIX,
+		CG_GL_MATRIX_IDENTITY);
+
+	cgGLSetStateMatrixParameter(
+		geometryModelViewProj,
+		CG_GL_MODELVIEW_PROJECTION_MATRIX,
+		CG_GL_MATRIX_IDENTITY);
+
+
+	V3 sphereCenter = scene->tms[1].GetCenterOfMass();
+	cgGLSetParameter3fv(vertexSphereCenter, (float*)&sphereCenter);
+	AABB aabb = scene->tms[1].ComputeAABB();
+	float sphereRadius = (aabb.corners[1] - aabb.corners[0]).Length() / 3.0f;
+	cgGLSetParameter1f(vertexSphereRadius, sphereRadius);
+	cgGLSetParameter1f(vertexMorphFraction, scene->morphFraction);
+	V3 eye = scene->ppc->C;
+	cgGLSetParameter3fv(fragmentEye, (float*)&eye);
+	V3 light = scene->L;
+	cgGLSetParameter3fv(fragmentLight, (float*)&light);
+}
+
+void DiffuseShaderInterface::PerFrameDisable() {
+}
+
+void DiffuseShaderInterface::BindPrograms() {
+#ifdef GEOMETRY_SUPPORT
+	cgGLBindProgram(geometryProgram);
+#endif
+	cgGLBindProgram(vertexProgram);
+	cgGLBindProgram(fragmentProgram);
 }
 

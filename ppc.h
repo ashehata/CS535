@@ -26,4 +26,7 @@ public:
 	void LoadFromTextFile(char *fname);
 	void SetIntrinsicsHW(float nearZ, float farZ);
 	void SetExtrinsicsHW();
+
+	void SetSlerpInterpolated(V3 origin, float fracf, V3 axis);
+	void createGLImage();
 };

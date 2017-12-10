@@ -5,6 +5,9 @@
 #include <iostream>
 #include "scene.h"
 #include "v3.h"
+#include <tiffio.h>
+#include "lodepng.h"
+
 
 using namespace std;
 
@@ -16,6 +19,8 @@ FrameBuffer::FrameBuffer(int u0, int v0,
 	w = _w;
 	h = _h;
 	pix = new unsigned int[w*h];
+	alpha = new int[w*h];
+
 	zb = new float[w*h];
 
 }
@@ -391,3 +396,160 @@ unsigned int FrameBuffer::LookUpBilinear(float s, float t) {
 
 }
 
+
+void FrameBuffer::LoadImage(string filepath) {
+	uint32 height;
+	uint32 width;
+
+	if (filepath.find(".tiff") != string::npos) {
+		delete pix, alpha, zb;
+		TIFF *tif = TIFFOpen(filepath.c_str(), "r");
+		// #define uint32 unsigned long
+		TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &width);           // uint32 width;
+		TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &height);        // uint32 height;
+
+		w = width;
+		h = height;
+		pix = new unsigned int[w*h];
+		zb = new float[w*h];
+		alpha = new int[w*h];
+
+		TIFFReadRGBAImage(tif, width, height, pix, 0);
+		for (int i = 0; i < width * height; i++) {
+			alpha[i] = (pix[i] >> 24);
+		}
+	}
+	/* PNG */
+	else {
+		std::vector<unsigned char> image; //the raw pixels
+		unsigned width, height;
+
+		//decode
+		unsigned error = lodepng::decode(image, width, height, filepath.c_str());
+
+		//if there's an error, display it
+		if (error) std::cout << "decoder error " << error << ": " << lodepng_error_text(error) << std::endl;
+
+		w = width;
+		h = height;
+		pix = new unsigned int[image.size()];
+		zb = new float[image.size()];
+		alpha = new int[image.size()];
+
+		int pixCount = 0;
+		for (int i = image.size() - 4; i > 0; i = i - 4) {
+			pix[pixCount] |= (image[i] << 0);
+			pix[pixCount] |= (image[i + 1] << 8);
+			pix[pixCount] |= (image[i + 2] << 16);
+			pix[pixCount] |= (image[i + 3] << 24);
+			alpha[pixCount] = (image[i + 3] << 24);
+			pixCount++;
+		}
+	}
+	redraw();
+	return;
+}
+
+void FrameBuffer::SaveImageHW(string filepath) {
+	TIFF *file;
+	GLubyte *image, *p;
+	char *description = "OpenGL Rendered Image";
+	int i;
+	int x = 0, y = 0;
+	int width = w;
+	int height = h;
+	file = TIFFOpen(filepath.c_str(), "w");
+	if (file == NULL) {
+		return;
+	}
+	image = new GLubyte[width * height * sizeof(GLubyte) * 3];
+
+	/* OpenGL's default 4 byte pack alignment would leave extra bytes at the
+	end of each image row so that each full row contained a number of bytes
+	divisible by 4.  Ie, an RGB row with 3 pixels and 8-bit componets would
+	be laid out like "RGBRGBRGBxxx" where the last three "xxx" bytes exist
+	just to pad the row out to 12 bytes (12 is divisible by 4). To make sure
+	the rows are packed as tight as possible (no row padding), set the pack
+	alignment to 1. */
+	glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+	glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+	TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32)width);
+	TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32)height);
+	TIFFSetField(file, TIFFTAG_BITSPERSAMPLE, 8);
+	TIFFSetField(file, TIFFTAG_COMPRESSION, 1);
+	TIFFSetField(file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+	TIFFSetField(file, TIFFTAG_SAMPLESPERPIXEL, 3);
+	TIFFSetField(file, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+	TIFFSetField(file, TIFFTAG_ROWSPERSTRIP, 1);
+	TIFFSetField(file, TIFFTAG_IMAGEDESCRIPTION, description);
+	p = image;
+	for (i = height - 1; i >= 0; i--) {
+		if (TIFFWriteScanline(file, p, i, 0) < 0) {
+			delete[] image;
+			TIFFClose(file);
+			return;
+		}
+		p += width * sizeof(GLubyte) * 3;
+	}
+	TIFFClose(file);
+}
+
+void FrameBuffer::SaveImage(string filepath) {
+	int width = w;
+	int height = h;
+	int sampleperpixel = 4;
+	TIFF *out = TIFFOpen(filepath.c_str(), "w");
+	TIFFSetField(out, TIFFTAG_IMAGEWIDTH, width);  // set the width of the image
+	TIFFSetField(out, TIFFTAG_IMAGELENGTH, height);    // set the height of the image
+	TIFFSetField(out, TIFFTAG_SAMPLESPERPIXEL, sampleperpixel);   // set number of channels per pixel
+	TIFFSetField(out, TIFFTAG_BITSPERSAMPLE, 8);    // set the size of the channels
+	TIFFSetField(out, TIFFTAG_ORIENTATION, ORIENTATION_TOPLEFT);    // set the origin of the image.
+																	//   Some other essential fields to set that you do not have to understand for now.
+	TIFFSetField(out, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+	TIFFSetField(out, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+	tsize_t linebytes = sampleperpixel * width;     // length in memory of one row of pixel in the image.
+	unsigned int *buf = NULL;        // buffer used to store the row of pixel information for writing to file
+									 //    Allocating memory to store the pixels of current row
+	if (TIFFScanlineSize(out) < linebytes)
+		buf = (unsigned int *)_TIFFmalloc(linebytes);
+	else
+		buf = (unsigned int *)_TIFFmalloc(TIFFScanlineSize(out));
+
+	// We set the strip size of the file to be size of one row of pixels
+	TIFFSetField(out, TIFFTAG_ROWSPERSTRIP, TIFFDefaultStripSize(out, width*sampleperpixel));
+
+	//Now writing image to the file one strip at a time
+	for (uint32 row = 0; row < height; row++)
+	{
+		for (int i = 0; i < width; i++) {
+			buf[i] = pix[(height - row - 1) * width + i];
+		}
+		if (TIFFWriteScanline(out, buf, row, 0) < 0)
+			break;
+	}
+
+	(void)TIFFClose(out);
+	if (buf)
+		_TIFFfree(buf);
+	return;
+}
+
+int FrameBuffer::GetAlpha(int u, int v) {
+	return alpha[(h - v - 1)*w + u];
+}
+
+unsigned int* FrameBuffer::ConvertToGL() {
+	unsigned int * retval = new unsigned int[w*h];
+
+	int i = 0;
+
+	for (int v = 0; v < h; v++) {
+		for (int u = 0; u < w; u++) {
+			retval[i] = Get(u, v);
+			i++;
+		}
+	}
+
+	return retval;
+}

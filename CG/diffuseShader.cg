@@ -1,0 +1,73 @@
+
+struct VertexDataInput {
+	float4 vertex: POSITION;
+	float3 normal: NORMAL;
+	float3 color: COLOR;
+};
+
+struct VertexDataOutput {
+	float4 projv  : POSITION;
+	float3 normal: TEXCOORD0;
+	float3 vxyz: TEXCOORD1;
+	float3 color : COLOR;
+};
+
+struct PixelDataOutput {
+	float3 color : COLOR;
+};
+
+VertexDataOutput VertexMain(VertexDataInput vdi, 
+  uniform float4x4 modelViewProj, uniform float sphereRadius,
+  uniform float3 sphereCenter, uniform float morphFraction) {
+
+  VertexDataOutput ret;
+  ret.projv = mul(modelViewProj, vdi.vertex);
+  ret.normal = vdi.normal;
+  ret.vxyz = vdi.vertex.xyz;
+  ret.color = vdi.color;
+  return ret;
+
+
+}
+
+TRIANGLE void GeometryMain(AttribArray<VertexDataOutput> tverts,
+	uniform float4x4 modelViewProj) {
+
+	emitVertex(tverts[0]);
+	emitVertex(tverts[1]);
+	emitVertex(tverts[2]);
+	return;
+
+}
+
+
+PixelDataOutput FragmentMain(VertexDataOutput pdi, 
+	uniform float3 eye, uniform float3 light,
+	uniform float3 tlc, uniform float3 trc, uniform float3 blc, uniform sampler2D billboardTexture, uniform samplerCUBE environmentMap) {
+
+
+
+  PixelDataOutput ret;
+  float3 materialColor = pdi.color;
+  float ka = 0.3f;
+  float3 eyev = normalize(eye-pdi.vxyz);
+  float3 normal = normalize(pdi.normal);
+  float3 lightv = normalize(light-pdi.vxyz);
+  float kd = dot(normal, lightv);
+  kd = (kd < 0.0f) ? 0.0f : kd;
+  float specc = 90.0f;
+  float3 ev = eye-pdi.vxyz;
+  float3 evn = normal * ev * normal;
+  float3 reflectedv = normalize(evn * 2.0f - ev);
+  float ks = dot(reflectedv, lightv); 
+  ks = (ks < 0.0f) ? 0.0f : ks;
+  ks = pow(ks, specc);
+  float3 litColor = materialColor*(ka + (1-ka)*kd);
+
+  litColor = litColor + float3(1.0f, 1.0f, 1.0f)*ks;
+
+
+ ret.color.rgb = litColor;
+ return ret;
+
+}

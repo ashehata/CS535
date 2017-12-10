@@ -40,11 +40,54 @@ class ShaderOneInterface {
   CGparameter billboardtrc;
   CGparameter billboardblc;
 
+  CGparameter environmentMap;
+
+
 public:		  
   ShaderOneInterface() {};
   bool PerSessionInit(CGInterface *cgi); // per session initialization
   void BindPrograms(); // enable geometryProgram, vertexProgram, fragmentProgram
   void PerFrameInit(); // set uniform parameter values, etc.
   void PerFrameDisable(); // disable programs
+
+};
+
+class EnvironmentMappingInterface {
+	CGprogram geometryProgram; // the geometry shader to be used for the "ShaderOne"
+	CGprogram vertexProgram;
+	CGprogram fragmentProgram;
+	// uniform parameters, i.e parameters that have the same value for all geometry rendered
+	CGparameter vertexModelViewProj; // a matrix combining projection and modelview matrices
+	CGparameter vertexSphereRadius, vertexSphereCenter, vertexMorphFraction;
+	CGparameter geometryModelViewProj; // geometry shader
+	CGparameter fragmentEye; // output view center of projection
+	CGparameter environmentMap;
+
+public:
+	EnvironmentMappingInterface() {};
+	bool PerSessionInit(CGInterface *cgi); // per session initialization
+	void BindPrograms(); // enable geometryProgram, vertexProgram, fragmentProgram
+	void PerFrameInit(); // set uniform parameter values, etc.
+	void PerFrameDisable(); // disable programs
+
+};
+
+class DiffuseShaderInterface {
+	CGprogram geometryProgram; // the geometry shader to be used for the "ShaderOne"
+	CGprogram vertexProgram;
+	CGprogram fragmentProgram;
+	// uniform parameters, i.e parameters that have the same value for all geometry rendered
+	CGparameter vertexModelViewProj; // a matrix combining projection and modelview matrices
+	CGparameter vertexSphereRadius, vertexSphereCenter, vertexMorphFraction;
+	CGparameter geometryModelViewProj; // geometry shader
+	CGparameter fragmentEye; // output view center of projection
+	CGparameter fragmentLight; // position of light
+
+public:
+	DiffuseShaderInterface() {};
+	bool PerSessionInit(CGInterface *cgi); // per session initialization
+	void BindPrograms(); // enable geometryProgram, vertexProgram, fragmentProgram
+	void PerFrameInit(); // set uniform parameter values, etc.
+	void PerFrameDisable(); // disable programs
 
 };

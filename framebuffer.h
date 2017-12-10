@@ -12,6 +12,8 @@ public:
 	int isHW;
 	unsigned int id;
 	unsigned int *pix;
+	int *alpha;
+
 	float *zb;
 	int w, h;
 	FrameBuffer(int u0, int v0, int _w, int _h, unsigned int _id);
@@ -37,4 +39,13 @@ public:
 	unsigned int LookUpNN(float s, float t);
 	unsigned int LookUpBilinear(float s, float t);
 	int IsVisible(V3 PP);
+
+	int GetAlpha(int u, int v);
+	void LoadImage(string filepath);
+	void SaveImage(string filepath);
+	unsigned int* ConvertToGL();
+
+	void SaveImageHW(string filepath);
+
+
 };

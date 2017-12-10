@@ -47,7 +47,7 @@ TRIANGLE void GeometryMain(AttribArray<VertexDataOutput> tverts,
 
 PixelDataOutput FragmentMain(VertexDataOutput pdi, 
 	uniform float3 eye, uniform float3 light,
-	uniform float3 tlc, uniform float3 trc, uniform float3 blc, uniform sampler2D billboardTexture) {
+	uniform float3 tlc, uniform float3 trc, uniform float3 blc, uniform sampler2D billboardTexture, uniform samplerCUBE environmentMap) {
 
 
 
@@ -56,20 +56,21 @@ PixelDataOutput FragmentMain(VertexDataOutput pdi,
 
   float3 materialColor = pdi.color;
   float ka = 0.4f;
-  float3 eyev = normalize(eye-pdi.vxyz);
+  float3 ev = normalize(eye - pdi.vxyz);
   float3 normal = normalize(pdi.normal);
   float3 lightv = normalize(light-pdi.vxyz);
   float kd = dot(normal, lightv);
   kd = (kd < 0.0f) ? 0.0f : kd;
-  float3 litColor = materialColor*(ka + (1-ka)*kd);
-  ret.color.rgb = litColor;
+	float3 litColor = materialColor*(ka + (1-ka)*kd);
+	ret.color.rgb = litColor;
+	float3 evn = normal * ev * normal;
 
-   float3 reflectedRay = normalize(pdi.normal * (eye * pdi.normal) * 2.0 - eye);
+   float3 reflectedRay = normalize(evn * 2.0f - ev);
 
    float3 bbNormal = normalize(cross(blc - tlc, trc - tlc));
    float t =  dot((tlc - pdi.vxyz), bbNormal);
    t = t / dot(reflectedRay, bbNormal);
-   if (t> 0){
+   if (t > 0 && t < 100){
    // if intersection, compute billboard texture coordinates
    float bbWidthNum = pdi.vxyz.x - tlc.x;
    float bbWidthDenom = trc.x - tlc.x;
@@ -79,33 +80,28 @@ PixelDataOutput FragmentMain(VertexDataOutput pdi,
    float bbHeightDenom = blc.y - tlc.y;
    float t = bbHeightNum/bbHeightDenom;
    
-   if (s > 0 && s < 1 && t > 0 && s < 1){
+   if (s > 0.001 && s < 0.99 && t > 0.01 && s < 0.99){
 	float2 st = vec2(s, t);
 	float4 tex = tex2D(billboardTexture,st);
 	if (tex.a != 0){
 		ret.color.rgb = tex.rgb;
 	}
 	else{
-	     ret.color.rgb = litColor;
+		ret.color = texCUBE(environmentMap, reflectedRay * -1);
 	}
    }
 
    else{
-     ret.color.rgb = litColor;
+		ret.color = texCUBE(environmentMap, reflectedRay * -1);
    }
 
 
    }
    else{
-	ret.color.rgb = litColor;
+		ret.color = texCUBE(environmentMap, reflectedRay * -1);
    }
-
-
-
-// lookup billboard texture at intersection texture coordinates
-
-// if not background (i.e. transparent) set color
- 
+  
+	 
  return ret;
 
 }

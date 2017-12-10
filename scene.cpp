@@ -13,13 +13,17 @@ using namespace std;
 
 Scene::Scene() {
 
+	scene = this;
+
 	morphFraction = 0.0f;
 
 	gui = new GUI();
 	gui->show();
 
-	L = V3(0.0f, 0.0f, 0.0f);
-	specc = 180.0f;
+	cm = new CubeMap("textures/uffizi_cross.tiff");
+
+
+	specc = 90.0f;
 
 	int u0 = 20;
 	int v0 = 20;
@@ -74,11 +78,11 @@ Scene::Scene() {
 	tms[2].enabled = 1;
 
 
-	CreateBillboard();
 
 	ppc->C = tms[0].GetCenterOfMass() + V3(-25.0f, 25.0f, 200);
 	L = ppc->C;
 
+	CreateBillboard();
 
 
 	smppc = 0;
@@ -94,7 +98,6 @@ void Scene::CreateBillboard() {
 	PPC *cam = new PPC(1024, 1024, 45);
 	cam->PositionAndOrient(V3(0, 0, 0), tms[2].GetCenterOfMass(), V3(0, 1, 0));
 	RenderBillboard(billboard, cam, 2);
-	billboard->show();
 
 	AABB aabb = tms[2].ComputeAABB();
 
@@ -168,13 +171,29 @@ void Scene::ShadowMapSetup() {
 void Scene::DBG() {
 
 	{
-
-		for (int fi = 0; fi < 1000; fi++) {
-			morphFraction = (float)fi / 1299.0f;
+		V3 O = tms[0].GetCenterOfMass();
+		int framesN = 150;
+		for (int fi = 0; fi < framesN; fi++) {
+			float fracf = (float)fi / (float)(framesN - 1);
+			ppc->SetSlerpInterpolated(O, 1, V3(0, 1, 0));
 			RenderAll();
 			Fl::check();
 		}
-		return;
+
+		for (int fi = 0; fi < framesN - 20; fi++) {
+			float fracf = (float)fi / (float)(framesN - 1);
+			ppc->SetSlerpInterpolated(O, 1, V3(-1, 1, 1));
+			RenderAll();
+			Fl::check();
+		}
+
+		for (int fi = 0; fi < framesN - 20; fi++) {
+			float fracf = (float)fi / (float)(framesN - 1);
+			ppc->SetSlerpInterpolated(O, 1, V3(1, 0, 0));
+			RenderAll();
+			Fl::check();
+		}
+
 
 
 	}
@@ -460,10 +479,12 @@ void Scene::NewButton() {
 void Scene::RenderAll() {
 
 	//	Render(fb, ppc);
-	if (hwfb)
+	if (hwfb) {
 		hwfb->redraw();
-	if (gpufb)
+	}
+	if (gpufb) {
 		gpufb->redraw();
+	}
 	//	Render(fb3, ppc3);
 
 }
@@ -496,8 +517,8 @@ void Scene::InitializeHW() {
 	// Give the image to OpenGL
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texts->w, texts->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	
 	tms[1].texId = checkerboardId;
@@ -509,7 +530,7 @@ void Scene::InitializeHW() {
 
 	for (int v = 0; v < texts->h; v++) {
 		for (int u = 0; u < texts->w; u++) {
-			texture[i] = billboard->Get(u, v);
+			texture[i] = billboard->Get(texts->w - u-1, v);
 			i++;
 		}
 	}
@@ -524,18 +545,19 @@ void Scene::InitializeHW() {
 	// Give the image to OpenGL
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, billboard->w, billboard->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, texture);
 
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 
 	billboardTextureId = billboardId;
 	tms[0].texId = billboardId;
+
+	cm->InitializeHW();
 
 	HWInitialized = true;
 }
 
 void Scene::RenderHW() {
 	
-
 	// clear the framebuffer
 	glClearColor(0.0, 0.0f, 0.5f, 1.0f);
 	glEnable(GL_DEPTH_TEST);
@@ -559,6 +581,9 @@ void Scene::RenderHW() {
 		tms[tmi].RenderHW();
 	}
 
+	hwfbCounter++;
+	hwfb->SaveImageHW("HW/" + to_string(hwfbCounter) + ".tiff");
+
 }
 
 void Scene::RenderGPU() {
@@ -568,11 +593,16 @@ void Scene::RenderGPU() {
 		cgi->PerSessionInit();
 		soi = new ShaderOneInterface();
 		soi->PerSessionInit(cgi);
+		envoi = new EnvironmentMappingInterface();
+		envoi->PerSessionInit(cgi);
+		doi = new DiffuseShaderInterface();
+		doi->PerSessionInit(cgi);
 	}
 
 	if (!HWInitialized) {
 		InitializeHW();
 	}
+
 
 
 	// clear the framebuffer
@@ -586,32 +616,70 @@ void Scene::RenderGPU() {
 	ppc->SetIntrinsicsHW(1.0f, 1000.0f);
 	// set extrinsics
 	ppc->SetExtrinsicsHW();
-
+	
 	tms[1].RenderHW();
 
 
-	// per frame initialization
 	cgi->EnableProfiles();
-	soi->PerFrameInit();
-	soi->BindPrograms();
 
+	envoi->PerFrameInit();
+	envoi->BindPrograms();
+	ppc->createGLImage();
+	envoi->PerFrameDisable();
+
+
+
+	// per frame initialization
+
+	if (reflections) {
+		soi->PerFrameInit();
+		soi->BindPrograms();
+	}
 	// render geometry
-
+	else {
+		doi->PerFrameInit();
+		doi->BindPrograms();
+	}
 	tms[0].RenderHW();
+	
+
+	if (reflections) {
+		soi->PerFrameDisable();
+	}
+	// render geometry
+	else {
+		doi->PerFrameDisable();
+	}
+
+	doi->PerFrameInit();
+	doi->BindPrograms();
+
 	tms[2].RenderHW();
 
 
+	doi->PerFrameDisable();
 	cgi->DisableProfiles();
+
+	gpufbCounter++;
+	gpufb->SaveImageHW("GPU/" + to_string(hwfbCounter) + ".tiff");
+
 }
 
 void Scene::EnableFilledMode() {
-
+	for (int i = 0; i < tmsN; i++) {
+		tms[i].filledMode = true;
+	}
+	RenderAll();
 }
 
 void Scene::EnableWireframeMode() {
-
+	for (int i = 0; i < tmsN; i++) {
+		tms[i].filledMode = false;
+	}
+	RenderAll();
 }
 
 void Scene::ToggleReflectionShader() {
-
+	reflections = ! reflections;
+	RenderAll();
 }

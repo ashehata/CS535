@@ -5,13 +5,15 @@
 #include "tm.h"
 #include "gfb.h"
 #include "CGInterface.h"
-
+#include "CubeMap.h"
 
 class Scene {
 public:
 
 	CGInterface *cgi;
 	ShaderOneInterface *soi;
+	EnvironmentMappingInterface *envoi;
+	DiffuseShaderInterface *doi;
 
 	GUI *gui;
 	FrameBuffer *fb, *fb3, *smfb, *hwfb, *gpufb;
@@ -24,6 +26,7 @@ public:
 	V3 L;
 	float specc;
 	TM *tms;
+	CubeMap *cm;
 	int tmsN;
 	FrameBuffer *texts;
 	PPC *ppc, *ppc3, *smppc;
@@ -45,9 +48,16 @@ public:
 	void EnableWireframeMode();
 	void ToggleReflectionShader();
 
+	bool environmentMapping = true;
+
+	bool reflections = false;
 
 
 	float morphFraction;
+
+	int hwfbCounter = 0;
+	int gpufbCounter = 0;
+
 };
 
 extern Scene *scene;

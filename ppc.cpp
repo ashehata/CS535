@@ -187,3 +187,28 @@ void PPC::SetExtrinsicsHW() {
 
 }
 
+void PPC::createGLImage() {
+		float bf = 0.0f;
+		glColor4f(1.0f, 0.0f, 0.0f, 1.0f);
+		float zMed = (1 + 1000) / 2.0f;
+		V3 V;
+		glBegin(GL_QUADS);
+		V = GetPoint(bf + 0.0f, bf + 0.0f, zMed);
+		glVertex3fv((float*)&V);
+		V = GetPoint(bf + 0.0f, (float)h - bf, zMed);
+		glVertex3fv((float*)&V);
+		V = GetPoint((float)w - bf, (float)h - bf, zMed);
+		glVertex3fv((float*)&V);
+		V = GetPoint((float)w - bf, bf + 0.0f, zMed);
+		glVertex3fv((float*)&V);
+		glEnd();
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+}
+
+#define PI 3.1415
+
+void PPC::SetSlerpInterpolated(V3 origin, float fracf, V3 axis) {
+	V3 newC = this->C.RotatePointAboutAxis(V3(0, 0, 0), axis, fracf);
+	PositionAndOrient(newC, origin, V3(0, 1, 0));
+
+}
